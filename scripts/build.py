@@ -71,8 +71,9 @@ class SampleBuilder:
         "spdx_build": "spdx/build.spdx",
         "spdx_zephyr": "spdx/zephyr.spdx"
     }
-    
+
     _MEMORY_EXTENSION_REGEX = r"region `(\S+)' overflowed by (\d+) bytes"
+    _ARCH_ERROR_REGEX = r"Arch .*? not supported"
 
     def __del__(self):
         # Remove the temporary build directory
@@ -313,10 +314,16 @@ class SampleBuilder:
             print("Build failed. DTS file is not present. Aborting!")
             return
 
+        arch_err = re.findall(self._ARCH_ERROR_REGEX, west_output)
+        if arch_err:
+            print("Build failed. Arch not supported. Aborting!")
+            return
+
         sizes = self._prepare_node_entries(west_output, dts_filename)
         if not sizes:
             print("Build failed. Size is not the issue. Aborting!")
             return
+
 
         # we're out of memory. We'll try to increase all detected regions at once, but we'll repeat until:
         # - binary links successfully
