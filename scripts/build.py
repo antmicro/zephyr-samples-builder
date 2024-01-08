@@ -15,6 +15,8 @@ from argparse import ArgumentParser
 import config
 from common import (
     bold,
+    green,
+    red,
     create_zip_archive,
     find_node_size,
     decode_node,
@@ -42,6 +44,10 @@ def remember_cwd():
     finally:
         os.chdir(curdir)
 
+
+KCONFIG_REQUIRED_SYMBOLS = {
+    "hello_world_user": ("CONFIG_USERSPACE=y",)
+}
 
 class SampleBuilder:
     def __init__(self, platform: str, sample_path: str, sample_name: str) -> None:
@@ -114,7 +120,8 @@ class SampleBuilder:
             self._check_extend_memory(west_output)
 
         arifacts = self.get_artifacts()
-        self.success = "elf" in arifacts
+
+        self.success = ("elf" in arifacts) and self._check_kconfig_requirements()
 
         return arifacts
 
@@ -420,6 +427,32 @@ class SampleBuilder:
             self.overlays["memory"] = overlay_path
             fail, west_output = self._build()
 
+    def _check_kconfig_requirements(self):
+        """
+        Check if the config file generated for this board has symbols set to the
+        required status.
+        """
+        ret = True
+
+        if not self.sample_name in KCONFIG_REQUIRED_SYMBOLS:
+            return ret
+
+        symbols = KCONFIG_REQUIRED_SYMBOLS[self.sample_name]
+        config_file = self.get_artifacts()["config"]
+
+        with open(config_file) as f:
+            config = f.read().splitlines()
+
+        for symbol in symbols:
+            print(f"Checking for {bold(symbol)} in {bold(config_file)}... ", end="")
+            for l in config:
+                if l == symbol:
+                    print(bold(green("Found!")))
+                    break
+            else:
+                print(bold(red("Not found!")))
+                ret = False
+        return ret
 
 def get_full_name(yaml_data):
     full_board_name = yaml_data['name']
