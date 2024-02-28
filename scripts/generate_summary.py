@@ -110,6 +110,7 @@ def collective_json_result(aggregated_results: list) -> str:
         sample_entry = dict(
             status="BUILT" if result["success"] else "NOT BUILT",
             extended_memory=result["extended_memory"],
+            dts_include_chain=result["dts_include_chain"],
         )
 
         collective[platform]["samples"][sample_name] = sample_entry
